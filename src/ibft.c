@@ -37,6 +37,8 @@ __FBSDID("$FreeBSD$");
 #include <vm/vm.h>
 #include <vm/pmap.h>
 #include <machine/vmparam.h>
+#include <contrib/dev/acpica/include/acpi.h>
+#include "opt_acpi.h"
 #include "ibft.h"
 
 /* location of iBFT */
@@ -533,8 +535,28 @@ ibft_search_signature(uint8_t *addr, size_t size)
 			IBFT_SIGNATURE_LENGTH) == 0) {
 			return (addr + n);
 		}
+		if (memcmp(addr + n, ACPI_SIG_IBFT,
+			IBFT_SIGNATURE_LENGTH) == 0) {
+			return (addr + n);
+		}
 	}
 	return (NULL);
+}
+
+/* Look up ACPI IBFT table */
+static uint8_t *
+ibft_acpi_lookup(void)
+{
+	ACPI_TABLE_IBFT *ibft;
+	ACPI_STATUS status;
+
+	status = AcpiGetTable(ACPI_SIG_IBFT, 1, (ACPI_TABLE_HEADER **)&ibft);
+	if (ACPI_FAILURE(status)) {
+		status = AcpiGetTable(IBFT_SIGNATURE, 1, (ACPI_TABLE_HEADER **)&ibft);
+		if (ACPI_FAILURE(status))
+			return (NULL);
+	}
+	return (uint8_t *)ibft;
 }
 
 int
@@ -550,6 +572,18 @@ ibft_init(void)
 	if (cp != NULL) {
 		if (cp[0] != '\0' && strcmp(cp, "0") != 0)
 			return (-1);
+	}
+
+	p = ibft_acpi_lookup();
+	if (p != NULL) {
+		error = ibft_parse_structure(p);
+		if (!error) {
+			if (ibft_verbose) {
+				printf("found iBFT via ACPI\n");
+			}
+			ibft_signature = p;
+			return (0);
+		}
 	}
 
 	/* search signature */

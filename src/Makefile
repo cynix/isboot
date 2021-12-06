@@ -5,7 +5,7 @@
 KMOD=	isboot
 SRCS=	isboot.c ibft.c ibft_kenv.c iscsi.c
 SRCS+=	isboot.h ibft.h iscsi_compat.h
-SRCS+=	opt_cam.h
+SRCS+=	opt_cam.h opt_acpi.h
 SRCS+=	device_if.h bus_if.h
 #CFLAGS+= -DVIMAGE
 #CFLAGS+= -DIBFT_VERBOSE
