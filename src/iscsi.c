@@ -1778,7 +1778,7 @@ next_loginpdu:
 	I_bit = 1;
 	T_bit = C_bit = 0;
 	CSG = NSG = 0;
-	BDADD8(&req[0], I_bit, 7);
+	BDADD8(&req[0], I_bit, 6);
 	BDADD8(&req[1], T_bit, 7);
 	BDADD8(&req[1], C_bit, 6);
 	BDADD8W(&req[1], CSG, 3, 2);
