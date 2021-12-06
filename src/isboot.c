@@ -48,6 +48,9 @@ __FBSDID("$FreeBSD$");
 #include <netinet/in_var.h>
 #include <netinet6/nd6.h>
 #include <net/route.h>
+#if __FreeBSD_version >= 1300091
+#include <net/route/route_ctl.h>
+#endif
 #include "ibft.h"
 #include "isboot.h"
 
@@ -348,6 +351,10 @@ isboot_set_v4gw(struct sockaddr_in *gateway)
 {
 	struct sockaddr_in dst;
 	struct sockaddr_in netmask;
+#if __FreeBSD_version >= 1300091
+	struct rt_addrinfo info;
+	struct rib_cmd_info rc;
+#endif
 	int error;
 
 	if (gateway->sin_family != AF_INET)
@@ -365,9 +372,18 @@ isboot_set_v4gw(struct sockaddr_in *gateway)
 	netmask.sin_addr.s_addr = htonl(0);
 
 	/* delete gateway if exists */
+#if __FreeBSD_version >= 1300091
+	bzero((caddr_t)&info, sizeof(info));
+	info.rti_flags = 0;
+	info.rti_info[RTAX_DST] = (struct sockaddr *)&dst;
+	info.rti_info[RTAX_NETMASK] = (struct sockaddr *)&netmask;
+	info.rti_info[RTAX_GATEWAY] = (struct sockaddr *)gateway;
+	error = rib_action(RT_DEFAULT_FIB, RTM_DELETE, &info, &rc);
+#else
 	error = rtrequest_fib(RTM_DELETE, (struct sockaddr *)&dst,
 	    (struct sockaddr *)gateway, (struct sockaddr *)&netmask,
 	    0, NULL, RT_DEFAULT_FIB);
+#endif
 	if (error) {
 		if (error != ESRCH) {
 			printf("rtrequest_fib RTM_DELETE error %d\n",
@@ -377,9 +393,18 @@ isboot_set_v4gw(struct sockaddr_in *gateway)
 	}
 
 	/* set new default gateway */
+#if __FreeBSD_version >= 1300091
+	bzero((caddr_t)&info, sizeof(info));
+	info.rti_flags = RTF_GATEWAY | RTF_STATIC;
+	info.rti_info[RTAX_DST] = (struct sockaddr *)&dst;
+	info.rti_info[RTAX_NETMASK] = (struct sockaddr *)&netmask;
+	info.rti_info[RTAX_GATEWAY] = (struct sockaddr *)gateway;
+	error = rib_action(RT_DEFAULT_FIB, RTM_ADD, &info, &rc);
+#else
 	error = rtrequest_fib(RTM_ADD, (struct sockaddr *)&dst,
 	    (struct sockaddr *)gateway, (struct sockaddr *)&netmask,
 	    RTF_GATEWAY | RTF_STATIC, NULL, RT_DEFAULT_FIB);
+#endif
 	if (error) {
 		printf("rtrequest_fib RTM_ADD error %d\n", error);
 		return (error);
@@ -392,6 +417,10 @@ isboot_set_v6gw(struct sockaddr_in6 *gateway)
 {
 	struct sockaddr_in6 dst;
 	struct sockaddr_in6 netmask;
+#if __FreeBSD_version >= 1300091
+	struct rt_addrinfo info;
+	struct rib_cmd_info rc;
+#endif
 	int error;
 
 	if (gateway->sin6_family != AF_INET6)
@@ -409,9 +438,18 @@ isboot_set_v6gw(struct sockaddr_in6 *gateway)
 	memset(&netmask.sin6_addr, 0, 16);
 
 	/* delete gateway if exists */
+#if __FreeBSD_version >= 1300091
+	bzero((caddr_t)&info, sizeof(info));
+	info.rti_flags = 0;
+	info.rti_info[RTAX_DST] = (struct sockaddr *)&dst;
+	info.rti_info[RTAX_NETMASK] = (struct sockaddr *)&netmask;
+	info.rti_info[RTAX_GATEWAY] = (struct sockaddr *)gateway;
+	error = rib_action(RT_DEFAULT_FIB, RTM_DELETE, &info, &rc);
+#else
 	error = rtrequest_fib(RTM_DELETE, (struct sockaddr *)&dst,
 	    (struct sockaddr *)gateway, (struct sockaddr *)&netmask,
 	    0, NULL, RT_DEFAULT_FIB);
+#endif
 	if (error) {
 		if (error != ESRCH) {
 			printf("rtrequest_fib RTM_DELETE error %d\n",
@@ -421,9 +459,18 @@ isboot_set_v6gw(struct sockaddr_in6 *gateway)
 	}
 
 	/* set new default gateway */
+#if __FreeBSD_version >= 1300091
+	bzero((caddr_t)&info, sizeof(info));
+	info.rti_flags = RTF_GATEWAY | RTF_STATIC;
+	info.rti_info[RTAX_DST] = (struct sockaddr *)&dst;
+	info.rti_info[RTAX_NETMASK] = (struct sockaddr *)&netmask;
+	info.rti_info[RTAX_GATEWAY] = (struct sockaddr *)gateway;
+	error = rib_action(RT_DEFAULT_FIB, RTM_ADD, &info, &rc);
+#else
 	error = rtrequest_fib(RTM_ADD, (struct sockaddr *)&dst,
 	    (struct sockaddr *)gateway, (struct sockaddr *)&netmask,
 	    RTF_GATEWAY | RTF_STATIC, NULL, RT_DEFAULT_FIB);
+#endif
 	if (error) {
 		printf("rtrequest_fib RTM_ADD error %d\n", error);
 		return (error);
