@@ -1749,11 +1749,11 @@ isboot_do_login(struct isboot_sess *sess)
 	int xcnt;
 
 	ISBOOT_TRACE("login start\n");
+	sess->stage = ISBOOT_SECURITYNEGOTIATION;
 	sess->chap_stage = ISBOOT_CHAP_NONE;
+	sess->authenticated = 0;
 	if (sess->req_auth != 0) {
 		/* deal with CHAP */
-		sess->authenticated = 0;
-		sess->stage = ISBOOT_SECURITYNEGOTIATION;
 		sess->auth.chap_id[0] = 0;
 		sess->auth.chap_mid[0] = 0;
 		sess->auth.chap_challenge_len = -1;
@@ -1763,10 +1763,6 @@ isboot_do_login(struct isboot_sess *sess)
 		memset(sess->auth.chap_mresponse_string, 0,
 		    sizeof(sess->auth.chap_mresponse_string));
 		sess->auth.chap_mresponse_len = -1;
-	} else {
-		/* no authentication */
-		sess->authenticated = 1;
-		sess->stage = ISBOOT_LOGINOPERATIONALNEGOTIATION;
 	}
 
 	xcnt = 0;
@@ -1807,7 +1803,7 @@ next_loginpdu:
 	case ISBOOT_SECURITYNEGOTIATION:
 		CSG = ISBOOT_SECURITYNEGOTIATION;
 		NSG = ISBOOT_LOGINOPERATIONALNEGOTIATION;
-		T_bit = 0;
+		T_bit = (sess->req_auth != 0) ? 0 : 1;
 		break;
 	case ISBOOT_LOGINOPERATIONALNEGOTIATION:
 		CSG = ISBOOT_LOGINOPERATIONALNEGOTIATION;
@@ -1843,7 +1839,8 @@ next_loginpdu:
 		case ISBOOT_CHAP_NONE:
 			isboot_append_param(pp, "AuthMethod=%s",
 			    sess->opt.authMethod);
-			sess->chap_stage = ISBOOT_CHAP_WAIT_A;
+			sess->chap_stage = (sess->req_auth != 0)
+			    ? ISBOOT_CHAP_WAIT_A : ISBOOT_CHAP_END;
 			break;
 		case ISBOOT_CHAP_WAIT_A:
 			if (strcasecmp(sess->opt.authMethod, "CHAP") != 0) {
